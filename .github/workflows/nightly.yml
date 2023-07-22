@@ -1,6 +1,8 @@
 name: Build
 
 on:
+  push:
+    branches: [ mirror-nightly ]
   schedule:
     # nightly (0th hour 0th minute of every day)
     - cron:  '0 0 * * *'

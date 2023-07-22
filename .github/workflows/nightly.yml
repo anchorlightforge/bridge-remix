@@ -109,7 +109,7 @@ jobs:
         cd ".\_upload"
         Get-ChildItem -Recurse -Path ".. -Filter "*hashes.txt" | Move-Item
         cd ".."
-        Compress-Archive -Path ".\_upload\*" -DestinationPath "bridge-remix-$`{{github.run_number}}-$`{{env.GITHUB_SHA_SHORT}}-$`{{matrix.build-flavour}}.zip"
+        Compress-Archive -Path ".\_upload\*" -DestinationPath "bridge-remix-${{github.run_number}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.build-flavour}}.zip`"
 
     - name: "Prune automatic releases to latest"
       uses: dev-drprasad/delete-older-releases@v0.2.1

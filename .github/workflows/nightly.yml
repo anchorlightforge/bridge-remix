@@ -1,0 +1,134 @@
+name: Build
+
+on:
+  schedule:
+    # nightly (0th hour 0th minute of every day)
+    - cron:  '0 0 * * *'
+
+jobs:
+  checkout:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    - name: Mirror
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git remote add upstream https://github.com/NVIDIAGameWorks/bridge-remix.git
+        git config pull.rebase false
+        git config --global user.name "${GITHUB_ACTOR}"
+        git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        git checkout -b nightly
+        git fetch origin main
+        git fetch origin nightly || true
+        git fetch upstream main
+        git pull upstream main
+        git push origin nightly
+  
+  build-windows:
+    runs-on: windows-2022
+    permissions: 
+      contents: write
+
+    strategy:
+      matrix:
+        include:
+          - build-flavour: debug
+            output-subdir: _output
+          - build-flavour: debugoptimized
+            output-subdir: _output
+          - build-flavour: release
+            output-subdir: _output
+
+    steps:
+    - name: Setup variables
+      uses: actions/github-script@v6
+      with:
+        script: core.exportVariable('GITHUB_SHA_SHORT', context.sha.substring(0, 7))
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        
+    - name: Setup Meson
+      run: pip install meson==0.64.1
+    
+    - name: Build
+      shell: pwsh
+      run: |
+        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+        . .\build_bridge_${{matrix.build-flavour}}.bat
+    
+    - name: Copy readme
+      run: copy artifacts_readme.txt _output
+    
+    - name: Upload binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: bridge-remix-${{env.GITHUB_SHA_SHORT}}-${{github.run_number}}-${{matrix.build-flavour}}
+        path: |
+          _output\*.dll
+          _output\*.exe
+          _output\*.pdb
+          _output\*.txt
+          _output\.trex\*.dll
+          _output\.trex\*.exe
+          _output\.trex\*.pdb
+      
+    - name: Create clean directory for CI/CD release 
+      shell: pwsh
+      run: |
+        New-Item ".\_upload" -Type Directory
+        cd ".\_upload"
+        Get-ChildItem -Path "..\_output" -Recurse -Filter *.pdb | Copy-Item
+        Get-ChildItem -Path "..\_output" -Recurse -Filter *.dll | Copy-Item
+        Get-ChildItem -Path "..\_output" -Recurse -Filter *.exe | Copy-Item
+        New-Item ".\.trex" -Type Directory
+        cd ".\.trex"
+        Get-ChildItem -Path "..\NvRemixBridge.*" | Move-Item
+        cd "..\.."
+        
+    - name: Generate Checksum
+      uses: jmgilman/actions-generate-checksum@v1.0.0
+      with:
+        patterns: |
+          .\_upload\*.pdb
+          .\_upload\*.dll
+          .\_upload\*.exe
+          .\_upload\.trex\*.pdb
+          .\_upload\.trex\*.exe
+
+    - name: Compress artifacts into archive
+      shell: pwsh
+      run: |
+        cd ".\_upload"
+        Get-ChildItem -Path "..\checksum.txt" | Move-Item
+        cd ".."
+        Compress-Archive -Path ".\_upload\*" -DestinationPath "bridge-remix-${{github.run_number}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.build-flavour}}.zip"
+
+    - name: "Prune automatic releases to latest"
+      uses: dev-drprasad/delete-older-releases@v0.2.1
+      with:
+        keep_latest: 3
+        delete_tag_pattern: automatic # defaults to ""
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: "Create new CI/CD release"
+      uses: softprops/action-gh-release@v1
+      with:
+        token: "${{ secrets.GITHUB_TOKEN }}"
+        tag_name: "automatic-${{matrix.build-flavour}}"
+        prerelease: true
+        generate_release_notes: true
+        name: "bridge-remix-automatic-${{matrix.build-flavour}}"
+        files: | 
+          *.zip
+          _upload/*.txt

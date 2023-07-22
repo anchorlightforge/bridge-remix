@@ -100,7 +100,7 @@ jobs:
       shell: pwsh
       run: |
         Get-ChildItem -Path ".\_upload" -Recurse -Attributes !Directory | Foreach-Object {
-         Get-FileHash $_.FullName | Out-String | Add-Content -Path hashes.txt
+         Get-FileHash $_.FullName | Add-Content -Path hashes.txt
         }
 
     - name: Compress artifacts into archive

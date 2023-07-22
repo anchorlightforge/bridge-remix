@@ -107,7 +107,7 @@ jobs:
       shell: pwsh
       run: |
         cd ".\_upload"
-        Get-ChildItem -Path "..\hashes.txt" | Move-Item
+        Get-ChildItem -Recurse -Path ".. -Filter "*hashes.txt" | Move-Item
         cd ".."
         Compress-Archive -Path ".\_upload\*" -DestinationPath "bridge-remix-${{github.run_number}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.build-flavour}}.zip"
 

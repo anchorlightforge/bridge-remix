@@ -100,7 +100,7 @@ jobs:
     - name: Generate checksums of artifacts
       shell: pwsh
       run: |
-        | New-Item -ItemType "file" -Value "${{hashFiles('_upload/+.pdb', '_upload/+.txt', '_upload/+.exe', '_upload/+.dll')}}" -Path ".\_upload\hashes.txt"
+        New-Item -ItemType "file" -Value "${{hashFiles('_upload/+.pdb', '_upload/+.txt', '_upload/+.exe', '_upload/+.dll')}}" -Path ".\_upload\hashes.txt"
         
     - name: Compress artifacts into archive
       shell: pwsh

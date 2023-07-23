@@ -96,15 +96,11 @@ jobs:
         cd ".\.trex"
         Get-ChildItem -Path "..\NvRemixBridge.*" | Move-Item
         cd "..\.."
-    - name: Generate Checksums file
+
+    - name: Generate checksums of artifacts
       shell: pwsh
       run: |
-        Get-ChildItem -Path ".\_upload" -Recurse -Attributes !Directory | Foreach-Object {
-         Get-FileHash $_.FullName | Add-Content -Path hashes.txt
-        }
-        cd ".\_upload"
-        Get-ChildItem -Recurse -Path "..\hashes.txt" | Move-Item
-        cd ".."
+        | New-Item -ItemType "file" -Value "${{hashFiles('_upload/+.pdb', '_upload/+.txt', '_upload/+.exe', '_upload/+.dll')}}" -Path ".\_upload\hashes.txt"
         
     - name: Compress artifacts into archive
       shell: pwsh

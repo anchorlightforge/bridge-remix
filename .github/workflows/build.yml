@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ CICD_Improvements ]
   pull_request:
     branches: [ main ]
 
